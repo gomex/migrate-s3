@@ -17,15 +17,17 @@ module Migrate
     end
   end
 
-  def self.copy(source_bucket_name, target_bucket_name)
-    
+  def self.list(source_bucket_name)
     s3 = Aws::S3::Resource.new({
-        region: ENV['AWS_REGION'],
-        access_key_id: ENV['AWS_ACCESS_KEY_ID'], 
-        secret_access_key: ENV['AWS_SECRET_ACCESS_KEY']
-      })
-    buckets = s3.bucket(source_bucket_name).objects(prefix:'image/', delimiter: '/', start_after:'image/').collect(&:key)
-    
+      region: ENV['AWS_REGION'],
+      access_key_id: ENV['AWS_ACCESS_KEY_ID'], 
+      secret_access_key: ENV['AWS_SECRET_ACCESS_KEY']
+    })
+    return s3.bucket(source_bucket_name).objects(prefix:'image/', delimiter: '/', start_after:'image/').collect(&:key)
+  end
+
+  def self.copy(source_bucket_name, target_bucket_name)
+    buckets = list(source_bucket_name)
     s3 = Aws::S3::Client.new(region: ENV['AWS_REGION'])
     for value in buckets do
         puts 'Target Value: ' + value.delete_prefix("image/")
