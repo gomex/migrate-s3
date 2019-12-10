@@ -18,24 +18,25 @@ module Migrate
   end
 
   def self.list(source_bucket_name)
+    source_folder = ENV['SOURCE_FOLDER']
     s3 = Aws::S3::Resource.new({
       region: ENV['AWS_REGION'],
       access_key_id: ENV['AWS_ACCESS_KEY_ID'], 
       secret_access_key: ENV['AWS_SECRET_ACCESS_KEY']
     })
-    return s3.bucket(source_bucket_name).objects(prefix:'image/', delimiter: '/', start_after:'image/').collect(&:key)
+    return s3.bucket(source_bucket_name).objects(prefix:"#{source_folder}/", delimiter: '/', start_after:"#{source_folder}/").collect(&:key)
   end
 
   def self.copy(source_bucket_name, target_bucket_name)
     buckets = list(source_bucket_name)
+    source_folder = ENV['SOURCE_FOLDER']
+    target_folder = ENV['TARGET_FOLDER']
     s3 = Aws::S3::Client.new(region: ENV['AWS_REGION'])
     for value in buckets do
-        puts 'Target Value: ' + value.delete_prefix("image/")
-        puts 'Value ' + value
         begin
-          s3.copy_object(bucket: target_bucket_name, copy_source: source_bucket_name + '/' + value, key: 'avatar/' + value.delete_prefix("image/"))
-          #puts 'Copying ' +  value + ' from bucket ' + source_bucket_name + ' to bucket ' + target_bucket_name
-          update_path(value, "avatar/#{value.delete_prefix("image/")}")
+          s3.copy_object(bucket: target_bucket_name, copy_source: source_bucket_name + "/" + value, key: "#{target_folder}/" + value.delete_prefix("#{source_folder}/"))
+          puts "Copying " +  value + " from bucket " + source_bucket_name + " to bucket " + target_bucket_name + " on #{target_folder}/" + value.delete_prefix("#{source_folder}/")
+          update_path(value, "#{target_folder}/#{value.delete_prefix("#{source_folder}/")}")
         rescue StandardError => ex
           puts 'Caught exception copying object ' + value + ' from bucket ' + source_bucket_name + ' to bucket ' + target_bucket_name + ' as ' + value + ':'
           puts ex.message
@@ -47,6 +48,5 @@ end
 if $PROGRAM_NAME == __FILE__
   source_bucket_name = ENV['SOURCE_BUCKET']
   target_bucket_name = ENV['TARGET_BUCKET']
-  #Migrate.update_path("imagem/avatar-32426.png", "avatar/avatar-32426.png")
   Migrate.copy(source_bucket_name,target_bucket_name)
 end
